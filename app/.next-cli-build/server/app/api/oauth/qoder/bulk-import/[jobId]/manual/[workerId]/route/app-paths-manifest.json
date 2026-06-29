@@ -1,0 +1,3 @@
+{
+  "/api/oauth/qoder/bulk-import/[jobId]/manual/[workerId]/route": "app/api/oauth/qoder/bulk-import/[jobId]/manual/[workerId]/route.js"
+}

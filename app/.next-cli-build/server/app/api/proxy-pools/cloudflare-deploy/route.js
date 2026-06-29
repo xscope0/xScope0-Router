@@ -1,0 +1,10 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/proxy-pools/cloudflare-deploy/route.js")
+R.c("server/chunks/[root-of-the-server]__1_4b0oz._.js")
+R.c("server/chunks/src_lib_db_18rbtbt._.js")
+R.c("server/chunks/[root-of-the-server]__1q9jms_._.js")
+R.c("server/chunks/node_modules_next_dist_13kw1hb._.js")
+R.c("server/chunks/node_modules_next_1zdbrne._.js")
+R.c("server/chunks/[root-of-the-server]__0oxznu7._.js")
+R.c("server/chunks/1oeh_server_app_api_proxy-pools_cloudflare-deploy_route_actions_1tkikin.js")
+R.m(697793)
+module.exports=R.m(697793).exports

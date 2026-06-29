@@ -1,0 +1,3 @@
+{
+  "/api/oauth/codebuddy-cn/bulk-import/[jobId]/route": "app/api/oauth/codebuddy-cn/bulk-import/[jobId]/route.js"
+}

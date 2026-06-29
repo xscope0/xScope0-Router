@@ -1,0 +1,13 @@
+{
+  "pages": {
+    "/_app": []
+  },
+  "devFiles": [],
+  "polyfillFiles": [],
+  "lowPriorityFiles": [
+    "static/dC7rsm_rBS24KNxCVG-Y2/_buildManifest.js",
+    "static/dC7rsm_rBS24KNxCVG-Y2/_ssgManifest.js",
+    "static/dC7rsm_rBS24KNxCVG-Y2/_clientMiddlewareManifest.js"
+  ],
+  "rootMainFiles": []
+}

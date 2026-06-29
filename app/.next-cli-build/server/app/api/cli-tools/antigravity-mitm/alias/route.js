@@ -1,0 +1,11 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/cli-tools/antigravity-mitm/alias/route.js")
+R.c("server/chunks/[root-of-the-server]__1oejiv2._.js")
+R.c("server/chunks/node_modules_next_1zdbrne._.js")
+R.c("server/chunks/[root-of-the-server]__0mhl_uw._.js")
+R.c("server/chunks/_1btm11j._.js")
+R.c("server/chunks/[root-of-the-server]__0oxznu7._.js")
+R.c("server/chunks/node_modules_next_dist_13kw1hb._.js")
+R.c("server/chunks/src_lib_db_18rbtbt._.js")
+R.c("server/chunks/1oeh_server_app_api_cli-tools_antigravity-mitm_alias_route_actions_07s0p89.js")
+R.m(500392)
+module.exports=R.m(500392).exports
