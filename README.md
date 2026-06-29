@@ -2,6 +2,12 @@
 
 Forked from [9router](https://github.com/decolua/9router).
 
+## Preview
+
+![Preview 1](assets/preview/preview-1.png)
+
+![Preview 2](assets/preview/preview-2.png)
+
 Extra features in this build:
 
 - xscope0 Modifed branding.
