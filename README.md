@@ -36,9 +36,13 @@
 
 ## Preview
 
-![Preview 1](assets/preview/preview-1.png)
+<div align="center">
 
-![Preview 2](assets/preview/preview-2.png)
+![Dashboard](assets/preview/preview-1.png)
+
+![API Proxy](assets/preview/preview-2.png)
+
+</div>
 
 ---
 
