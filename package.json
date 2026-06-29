@@ -1,7 +1,7 @@
 {
-  "name": "xscope0-modifed-router",
-  "version": "0.5.12-xscope0.1",
-  "description": "xscope0 Modifed Router - fork of 9router with extra provider automation",
+  "name": "xscope0-router",
+  "version": "0.5.12",
+  "description": "xscope0 Router — AI API proxy router with provider automation",
   "bin": {
     "9router": "./cli.js",
     "xscope0-router": "./cli.js"
