@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { spawn, exec, execSync } = require("child_process");
+const { spawn, exec, execSync, execFileSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const https = require("https");
@@ -51,13 +51,28 @@ function getAppPidFile() {
   return path.join(getAppDataDir(), "router.pid");
 }
 
+function normalizePid(pid) {
+  const text = String(pid || "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  const value = Number.parseInt(text, 10);
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+function normalizePort(value) {
+  const text = String(value || "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  const portNumber = Number.parseInt(text, 10);
+  return Number.isInteger(portNumber) && portNumber > 0 && portNumber <= 65535 ? portNumber : null;
+}
+
 function killPid(pid) {
-  if (!pid || pid === process.pid.toString()) return;
+  const pidNumber = normalizePid(pid);
+  if (!pidNumber || pidNumber === process.pid) return;
   try {
     if (process.platform === "win32") {
-      execSync(`taskkill /F /T /PID ${pid} 2>nul`, { stdio: "ignore", shell: true, windowsHide: true, timeout: 3000 });
+      execFileSync("taskkill", ["/F", "/T", "/PID", String(pidNumber)], { stdio: "ignore", windowsHide: true, timeout: 3000 });
     } else {
-      execSync(`kill -9 ${pid} 2>/dev/null`, { stdio: "ignore", timeout: 3000 });
+      process.kill(pidNumber, "SIGKILL");
     }
   } catch { }
 }
@@ -231,15 +246,9 @@ function getAppDataDir() {
 function killByPidFile(pidFile) {
   try {
     if (!fs.existsSync(pidFile)) return;
-    const pid = parseInt(fs.readFileSync(pidFile, "utf8").trim(), 10);
+    const pid = normalizePid(fs.readFileSync(pidFile, "utf8"));
     if (!pid) return;
-    try {
-      if (process.platform === "win32") {
-        execSync(`taskkill /F /T /PID ${pid}`, { stdio: "ignore", windowsHide: true, timeout: 3000 });
-      } else {
-        process.kill(pid, "SIGKILL");
-      }
-    } catch { }
+    try { killPid(pid); } catch { }
     try { fs.unlinkSync(pidFile); } catch { }
   } catch { }
 }
@@ -402,25 +411,24 @@ function killProxyByPidFile() {
   try {
     const pidFile = path.join(getAppDataDir(), "mitm", ".mitm.pid");
     if (!fs.existsSync(pidFile)) return;
-    const pid = parseInt(fs.readFileSync(pidFile, "utf8").trim(), 10);
+    const pid = normalizePid(fs.readFileSync(pidFile, "utf8"));
     if (!pid) return;
-
     if (process.platform === "win32") {
       // Graceful first (lets server cleanup hosts), then force
-      try { execSync(`taskkill /T /PID ${pid}`, { stdio: "ignore", windowsHide: true, timeout: 2000 }); } catch { }
+      try { execFileSync("taskkill", ["/T", "/PID", String(pid)], { stdio: "ignore", windowsHide: true, timeout: 2000 }); } catch { }
       if (!waitForExit(pid, 1500)) {
-        try { execSync(`taskkill /F /T /PID ${pid}`, { stdio: "ignore", windowsHide: true, timeout: 3000 }); } catch { }
+        try { execFileSync("taskkill", ["/F", "/T", "/PID", String(pid)], { stdio: "ignore", windowsHide: true, timeout: 3000 }); } catch { }
       }
       // Last-resort: PowerShell Stop-Process (sometimes succeeds where taskkill fails on admin processes)
       if (!waitForExit(pid, 500)) {
-        try { execSync(`powershell -NonInteractive -WindowStyle Hidden -Command "Stop-Process -Id ${pid} -Force"`, { stdio: "ignore", windowsHide: true, timeout: 3000 }); } catch { }
+        try { execFileSync("powershell", ["-NonInteractive", "-WindowStyle", "Hidden", "-Command", `Stop-Process -Id ${pid} -Force`], { stdio: "ignore", windowsHide: true, timeout: 3000 }); } catch { }
       }
     } else {
       // SIGTERM via cached sudo token first
-      try { execSync(`sudo -n kill -TERM ${pid} 2>/dev/null`, { stdio: "ignore", timeout: 2000 }); }
+      try { execFileSync("sudo", ["-n", "kill", "-TERM", String(pid)], { stdio: "ignore", timeout: 2000 }); }
       catch { try { process.kill(pid, "SIGTERM"); } catch { } }
       if (!waitForExit(pid, 1500)) {
-        try { execSync(`sudo -n kill -9 ${pid} 2>/dev/null`, { stdio: "ignore", timeout: 2000 }); }
+        try { execFileSync("sudo", ["-n", "kill", "-9", String(pid)], { stdio: "ignore", timeout: 2000 }); }
         catch { try { process.kill(pid, "SIGKILL"); } catch { } }
       }
     }
@@ -433,20 +441,24 @@ function killProcessOnPort(port) {
   return new Promise((resolve) => {
     try {
       const platform = process.platform;
+      const portNumber = normalizePort(port);
+      if (!portNumber) {
+        resolve();
+        return;
+      }
       let pid;
 
       if (platform === "win32") {
         try {
-          const output = execSync(`netstat -ano | findstr :${port}`, {
+          const output = execFileSync("netstat", ["-ano"], {
             encoding: 'utf8',
-            shell: true,
             windowsHide: true,
             timeout: 5000
           }).trim();
-          const lines = output.split('\n').filter(l => l.includes('LISTENING'));
+          const lines = output.split('\n').filter(l => l.includes(`:${portNumber}`) && l.includes('LISTENING'));
           if (lines.length > 0) {
-            pid = lines[0].trim().split(/\s+/).pop();
-            execSync(`taskkill /F /PID ${pid} 2>nul`, { stdio: 'ignore', shell: true, windowsHide: true, timeout: 3000 });
+            pid = normalizePid(lines[0].trim().split(/\s+/).pop());
+            killPid(pid);
           }
         } catch (e) {
           // Port is free or error
@@ -454,13 +466,13 @@ function killProcessOnPort(port) {
       } else {
         // macOS/Linux
         try {
-          const pidOutput = execSync(`lsof -ti:${port}`, {
+          const pidOutput = execFileSync("lsof", [`-ti:${portNumber}`], {
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'ignore']
           }).trim();
           if (pidOutput) {
-            pid = pidOutput.split('\n')[0];
-            execSync(`kill -9 ${pid} 2>/dev/null`, { stdio: 'ignore', timeout: 3000 });
+            pid = normalizePid(pidOutput.split('\n')[0]);
+            killPid(pid);
           }
         } catch (e) {
           // Port is free or error

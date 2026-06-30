@@ -19,6 +19,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
   const [polling, setPolling] = useState(false);
   const popupRef = useRef(null);
   const pollingAbortRef = useRef(false);
+  const pollingRunRef = useRef(0);
   const openedRef = useRef(false);
   const { copied, copy } = useCopyToClipboard();
 
@@ -86,30 +87,19 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
 
   // Poll for device code token
   const startPolling = useCallback(async (deviceCode, codeVerifier, interval, extraData, deadlineMs) => {
+    const runId = pollingRunRef.current + 1;
+    pollingRunRef.current = runId;
     pollingAbortRef.current = false;
     setPolling(true);
-    // Honor the upstream's expires_in when supplied (qoder sets 300s) so we
-    // don't time out earlier than the device code itself. Default 120s
-    // matches the prior behavior for providers that don't surface a value.
+    const isCurrentRun = () => !pollingAbortRef.current && pollingRunRef.current === runId;
     const startedAt = Date.now();
     const deadline = startedAt + (Number.isFinite(deadlineMs) && deadlineMs > 0 ? deadlineMs : 120_000);
 
     while (Date.now() < deadline) {
-      // Check if polling should be aborted
-      if (pollingAbortRef.current) {
-        console.log("[OAuthModal] Polling aborted");
-        setPolling(false);
-        return;
-      }
+      if (!isCurrentRun()) return;
 
-      // Delay between polls; re-check abort after waking
-      const sleepDone = await new Promise((r) => setTimeout(r, interval * 1000)).then(() => !pollingAbortRef.current);
-
-      if (!sleepDone) {
-        console.log("[OAuthModal] Polling aborted after sleep");
-        setPolling(false);
-        return;
-      }
+      await new Promise((resolve) => setTimeout(resolve, interval * 1000));
+      if (!isCurrentRun()) return;
 
       try {
         const res = await fetch(`/api/oauth/${provider}/poll`, {
@@ -119,9 +109,10 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
         });
 
         const data = await res.json();
+        if (!isCurrentRun()) return;
 
         if (data.success) {
-          pollingAbortRef.current = true; // Stop polling immediately
+          pollingAbortRef.current = true;
           setStep("success");
           setPolling(false);
           onSuccessRef.current?.();
@@ -136,6 +127,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
           interval = Math.min(interval + 5, 30);
         }
       } catch (err) {
+        if (!isCurrentRun()) return;
         setError(err.message);
         setStep("error");
         setPolling(false);
@@ -143,6 +135,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
       }
     }
 
+    if (!isCurrentRun()) return;
     setError("Authorization timeout");
     setStep("error");
     setPolling(false);
@@ -336,6 +329,8 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
       startOAuthFlow();
     } else if (justClosed) {
       pollingAbortRef.current = true;
+      pollingRunRef.current += 1;
+      setPolling(false);
       openedRef.current = false;
       if (provider === "codex") {
         fetch("/api/oauth/codex/stop-proxy").catch(() => {});
@@ -344,6 +339,13 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
       }
     }
   }, [isOpen, provider, startOAuthFlow, resetOAuthState]);
+
+  useEffect(() => {
+    return () => {
+      pollingAbortRef.current = true;
+      pollingRunRef.current += 1;
+    };
+  }, []);
 
   // Fixed-port server-side mode: poll status (proxy auto-exchanges + saves DB)
   useEffect(() => {

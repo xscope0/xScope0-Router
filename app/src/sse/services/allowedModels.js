@@ -61,16 +61,15 @@ export async function fetchModelsFetcherIds(providerId, providerInfo) {
     return _modelsFetcherCache[providerId];
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(fetcher.url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     if (!response.ok) return [];
 
     const data = await response.json();
@@ -96,7 +95,9 @@ export async function fetchModelsFetcherIds(providerId, providerInfo) {
     _modelsFetcherCacheExpiry[providerId] = now + MODELS_FETCHER_CACHE_TTL_MS;
     return result;
   } catch {
-    return _modelsFetcherCache[providerId] || [];
+    return now < (_modelsFetcherCacheExpiry[providerId] || 0) ? (_modelsFetcherCache[providerId] || []) : [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -127,16 +128,15 @@ async function fetchCompatibleModelIds(connection) {
     return [];
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
     const response = await fetch(url, {
       method: "GET",
       headers,
       cache: "no-store",
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     if (!response.ok) return [];
     const data = await response.json();
     const rawModels = Array.isArray(data) ? data : (data?.data || data?.models || data?.results || []);
@@ -151,6 +151,8 @@ async function fetchCompatibleModelIds(connection) {
     );
   } catch {
     return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
