@@ -36,8 +36,8 @@
 ---
 
 <div align="center">
-  <img src="assets/preview/preview-2.png" alt="Dashboard" width="48%">
-  <img src="assets/preview/preview-4.png" alt="Settings" width="48%">
+  <img src="assets/preview/preview-2.png" alt="Dashboard" width="600">
+  <img src="assets/preview/preview-4.png" alt="Settings" width="600">
 </div>
 
 ---
