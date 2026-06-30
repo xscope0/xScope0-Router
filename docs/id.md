@@ -174,5 +174,5 @@ MIT — Proyek asli: [9router](https://github.com/decolua/9router)
 ---
 
 <div align="center">
-  <sub>Dibuat oleh <a href="https://github.com/xscope0">xscope0</a></sub>
+  <sub>Dibuat oleh <a href="https://github.com/xscope0">xscope0</a> · Co-founder <a href="https://github.com/Laurent-xscope">Laurent-xscope</a></sub>
 </div>

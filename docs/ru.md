@@ -174,5 +174,5 @@ MIT — Оригинальный проект: [9router](https://github.com/deco
 ---
 
 <div align="center">
-  <sub>Создано <a href="https://github.com/xscope0">xscope0</a></sub>
+  <sub>Создано <a href="https://github.com/xscope0">xscope0</a> · Co-founder <a href="https://github.com/Laurent-xscope">Laurent-xscope</a></sub>
 </div>
