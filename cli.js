@@ -46,7 +46,10 @@ const pkg = require("./package.json");
 const { ensureSqliteRuntime, buildEnvWithRuntime } = require("./hooks/sqliteRuntime");
 const { ensureTrayRuntime } = require("./hooks/trayRuntime");
 const args = process.argv.slice(2);
-const APP_PID_FILE = path.join(os.homedir(), ".9router", "router.pid");
+// APP_PID_FILE uses getAppDataDir() for consistency across platforms
+function getAppPidFile() {
+  return path.join(getAppDataDir(), "router.pid");
+}
 
 function killPid(pid) {
   if (!pid || pid === process.pid.toString()) return;
@@ -73,11 +76,12 @@ function killRuntimeBuildProcesses() {
 
 function killAppPidFile() {
   try {
-    if (!fs.existsSync(APP_PID_FILE)) return;
-    const pid = fs.readFileSync(APP_PID_FILE, "utf8").trim();
+    const pidFile = getAppPidFile();
+    if (!fs.existsSync(pidFile)) return;
+    const pid = fs.readFileSync(pidFile, "utf8").trim();
     killPid(pid);
     killRuntimeBuildProcesses();
-    try { fs.unlinkSync(APP_PID_FILE); } catch { }
+    try { fs.unlinkSync(pidFile); } catch { }
   } catch { }
 }
 
@@ -101,8 +105,9 @@ function killPeerAppProcesses() {
 
 function writeAppPidFile() {
   try {
-    fs.mkdirSync(path.dirname(APP_PID_FILE), { recursive: true });
-    fs.writeFileSync(APP_PID_FILE, process.pid.toString());
+    const pidFile = getAppPidFile();
+    fs.mkdirSync(path.dirname(pidFile), { recursive: true });
+    fs.writeFileSync(pidFile, process.pid.toString());
   } catch { }
 }
 
@@ -566,7 +571,7 @@ const serverPath = fs.existsSync(customServerPath)
 
 if (!fs.existsSync(serverPath)) {
   console.error("Error: Standalone build not found.");
-  console.error("Please run 'npm run build:cli' first.");
+  console.error("Please run 'npm run build' first.");
   process.exit(1);
 }
 
@@ -674,7 +679,7 @@ function startServer(latestVersion) {
     if (isCleaningUp) return;
     isCleaningUp = true;
     try {
-      try { if (fs.existsSync(APP_PID_FILE) && fs.readFileSync(APP_PID_FILE, "utf8").trim() === process.pid.toString()) fs.unlinkSync(APP_PID_FILE); } catch { }
+      try { const pidFile = getAppPidFile(); if (fs.existsSync(pidFile) && fs.readFileSync(pidFile, "utf8").trim() === process.pid.toString()) fs.unlinkSync(pidFile); } catch { }
       // Kill tray if running
       try {
         const { killTray } = require("./src/cli/tray/tray");
