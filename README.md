@@ -2,7 +2,8 @@
   <img src="assets/logo.png" alt="xscope0 Router" width="120">
   <h1>xscope0 Router</h1>
   <p><strong>AI API proxy engine with provider failover, token compression, and circuit breaking.</strong></p>
-  <p>Route requests from any CLI tool through a single unified endpoint.</p>
+  <p>Route requests from any CLI tool through a single unified endpoint. Supports Claude Code, Codex, Cursor, Cline, OpenCode, and any OpenAI-compatible client.</p>
+  <p>Features automatic provider rotation, circuit breaking, account pooling, token compression (RTK / Caveman / Ponytail), format translation between protocols, and proxy pool management with auto-rotation on errors.</p>
 
   <a href="https://github.com/xscope0/xScope0-Router/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/xscope0/xScope0-Router?style=flat-square"></a>
   <a href="https://github.com/xscope0/xScope0-Router/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
@@ -13,7 +14,9 @@
 ---
 
 <div align="center">
-  <img src="assets/preview/preview-2.png" alt="xscope0 Router preview" width="100%">
+  <img src="assets/preview/preview-2.png" alt="Dashboard" width="32%">
+  <img src="assets/preview/preview-3.png" alt="Providers" width="32%">
+  <img src="assets/preview/preview-4.png" alt="Settings" width="32%">
 </div>
 
 ---
