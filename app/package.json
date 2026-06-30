@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 20127",
-    "build": "node scripts/build.js",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "vitest run --config tests/vitest.config.js",
     "dev:bun": "bun --bun next dev --webpack --port 20127",

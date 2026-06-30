@@ -6,3 +6,5 @@ app/.next
 *.log
 .env
 .env.*
+
+app/logs
