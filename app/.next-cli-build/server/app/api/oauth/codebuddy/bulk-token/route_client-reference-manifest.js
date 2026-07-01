@@ -1,3 +1,1 @@
-globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
-globalThis.__RSC_MANIFEST["/api/oauth/codebuddy/bulk-token/route"] = {"moduleLoading":{"prefix":"","crossOrigin":null},"clientModules":{},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"rscModuleMapping":{},"edgeRscModuleMapping":{},"entryCSSFiles":{},"entryJSFiles":{}};
-
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/oauth/codebuddy/bulk-token/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/blessed/xscope0-modifed-router/app/src/app/api/oauth/codebuddy/bulk-token/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

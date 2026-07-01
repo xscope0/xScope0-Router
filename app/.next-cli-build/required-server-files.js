@@ -104,7 +104,7 @@ self.__SERVER_FILES_MANIFEST={
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/opt/homebrew/lib/node_modules/9router/app",
+    "outputFileTracingRoot": "/Users/blessed/xscope0-modifed-router/app",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -310,7 +310,7 @@ self.__SERVER_FILES_MANIFEST={
       "bun:sqlite"
     ],
     "turbopack": {
-      "root": "/opt/homebrew/lib/node_modules/9router/app"
+      "root": "/Users/blessed/xscope0-modifed-router/app"
     },
     "outputFileTracingExcludes": {
       "*": [
@@ -361,7 +361,7 @@ self.__SERVER_FILES_MANIFEST={
       "fallback": []
     }
   },
-  "appDir": "/opt/homebrew/lib/node_modules/9router/app",
+  "appDir": "/Users/blessed/xscope0-modifed-router/app",
   "relativeAppDir": "",
   "files": [
     ".next/package.json",
@@ -372,6 +372,8 @@ self.__SERVER_FILES_MANIFEST={
     ".next/server/functions-config-manifest.json",
     ".next/server/middleware-manifest.json",
     ".next/server/middleware-build-manifest.js",
+    ".next/server/middleware-react-loadable-manifest.js",
+    ".next/react-loadable-manifest.json",
     ".next/server/app-paths-manifest.json",
     ".next/app-path-routes-manifest.json",
     ".next/server/server-reference-manifest.js",

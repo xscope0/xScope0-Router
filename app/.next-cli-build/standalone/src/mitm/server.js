@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const dns = require("dns");
 const { promisify } = require("util");
-const { execSync } = require("child_process");
+const { execFileSync, execSync } = require("child_process");
 const { log, err, dumpRequest, createResponseDumper, clearDumpDir } = require("./logger");
 const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATTERNS, MODEL_NO_MAP, getToolForHost } = require("./config");
 const { DATA_DIR, MITM_DIR } = require("./paths");
@@ -374,26 +374,46 @@ const server = https.createServer(sslOptions, async (req, res) => {
   }
 });
 
+function normalizePort(value) {
+  const text = String(value || "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  const port = Number.parseInt(text, 10);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
+}
+
+function normalizePid(value) {
+  const text = String(value || "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  const pid = Number.parseInt(text, 10);
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
+}
+
 // Kill only processes LISTENING on LOCAL_PORT (not outbound connections)
 function killPort(port) {
   try {
+    const portNumber = normalizePort(port);
+    if (!portNumber) return;
     let pidList = [];
     if (IS_WIN) {
-      const psCmd = `powershell -NonInteractive -WindowStyle Hidden -Command ` +
-        `"Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess"`;
-      const out = execSync(psCmd, { encoding: "utf-8", windowsHide: true }).trim();
+      const out = execFileSync("powershell", [
+        "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-Command",
+        `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess`,
+      ], { encoding: "utf-8", windowsHide: true }).trim();
       if (!out) return;
-      pidList = out.split(/\r?\n/).map(s => s.trim()).filter(p => p && Number(p) !== process.pid && Number(p) > 4);
+      pidList = out.split(/\r?\n/).map(normalizePid).filter(p => p && p !== process.pid && p > 4);
     } else {
-      const out = execSync(`${LSOF_BIN} -nP -iTCP:${port} -sTCP:LISTEN -t`, { encoding: "utf-8", windowsHide: true }).trim();
+      const out = execFileSync(LSOF_BIN, ["-nP", `-iTCP:${portNumber}`, "-sTCP:LISTEN", "-t"], { encoding: "utf-8", windowsHide: true }).trim();
       if (!out) return;
-      pidList = out.split("\n").filter(p => p && Number(p) !== process.pid);
+      pidList = out.split("\n").map(normalizePid).filter(p => p && p !== process.pid);
     }
     if (pidList.length === 0) return;
     pidList.forEach(pid => {
       try {
-        if (IS_WIN) execSync(`taskkill /F /PID ${pid}`, { windowsHide: true });
-        else process.kill(Number(pid), "SIGKILL");
+        if (IS_WIN) execFileSync("taskkill", ["/F", "/PID", String(pid)], { windowsHide: true });
+        else process.kill(pid, "SIGKILL");
       } catch (e) {
         err(`Failed to kill PID ${pid}: ${e.message}`);
       }

@@ -1,3 +1,1 @@
-globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
-globalThis.__RSC_MANIFEST["/api/v1beta/models/route"] = {"moduleLoading":{"prefix":"","crossOrigin":null},"clientModules":{},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"rscModuleMapping":{},"edgeRscModuleMapping":{},"entryCSSFiles":{},"entryJSFiles":{}};
-
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/v1beta/models/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/blessed/xscope0-modifed-router/app/src/app/api/v1beta/models/route":[],"/Users/blessed/xscope0-modifed-router/app/src/app/api/v1beta/models/[...path]/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

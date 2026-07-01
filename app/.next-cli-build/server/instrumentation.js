@@ -1,4 +1,1 @@
-var R=require("./chunks/[turbopack]_runtime.js")("server/instrumentation.js")
-R.c("server/chunks/src_12xtmzn._.js")
-R.m(2004)
-module.exports=R.m(2004).exports
+"use strict";(()=>{var a={};a.id=6183,a.ids=[6183],a.modules={21820:a=>{a.exports=require("os")},27172:(a,b,c)=>{c.r(b),c.d(b,{register:()=>d});async function d(){let{reactivateExpiredKimchiAccounts:a}=await c.e(3807).then(c.bind(c,53807));a().catch(a=>{console.warn("[instrumentation] Kimchi quota reactivation on startup failed:",a?.message||a)});let b=setInterval(()=>{a().catch(a=>{console.warn("[instrumentation] Kimchi quota reactivation tick failed:",a?.message||a)})},36e5);"function"==typeof b.unref&&b.unref()}},33873:a=>{a.exports=require("path")},46293:a=>{a.exports=require("sql.js")},55511:a=>{a.exports=require("crypto")},73024:a=>{a.exports=require("node:fs")},76760:a=>{a.exports=require("node:path")},77598:a=>{a.exports=require("node:crypto")},87550:a=>{a.exports=require("better-sqlite3")},94735:a=>{a.exports=require("events")}};var b=require("./webpack-runtime.js");b.C(a);var c=b(b.s=27172);module.exports=c})();

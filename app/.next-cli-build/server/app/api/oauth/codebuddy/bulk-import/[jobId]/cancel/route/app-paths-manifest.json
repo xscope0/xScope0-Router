@@ -1,3 +1,0 @@
-{
-  "/api/oauth/codebuddy/bulk-import/[jobId]/cancel/route": "app/api/oauth/codebuddy/bulk-import/[jobId]/cancel/route.js"
-}

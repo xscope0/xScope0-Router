@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/(dashboard)/dashboard/translator/page.js -> @monaco-editor/react":{"id":28202,"files":["static/chunks/8202.1ffc6ce531e066ce.js"]},"app/(dashboard)/dashboard/usage/components/UsageChart.js -> recharts":{"id":1604,"files":["static/chunks/1604.96b714abc0e9a5e4.js"]}}';

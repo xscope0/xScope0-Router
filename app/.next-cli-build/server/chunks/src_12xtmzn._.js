@@ -1,3 +1,0 @@
-module.exports=[2004,e=>{"use strict";async function t(){let{reactivateExpiredKimchiAccounts:t}=await e.A(143882);t().catch(e=>{console.warn("[instrumentation] Kimchi quota reactivation on startup failed:",e?.message||e)});let s=setInterval(()=>{t().catch(e=>{console.warn("[instrumentation] Kimchi quota reactivation tick failed:",e?.message||e)})},36e5);"function"==typeof s.unref&&s.unref()}e.s(["register",0,t])},143882,e=>{e.v(t=>Promise.all(["server/chunks/[root-of-the-server]__07w4o23._.js","server/chunks/src_sse_services_kimchiQuotaReactivation_01egirz.js"].map(t=>e.l(t))).then(()=>t(124289)))}];
-
-//# sourceMappingURL=src_12xtmzn._.js.map
