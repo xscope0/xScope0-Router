@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button, Badge, Input, Modal, Select } from "@/shared/components";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 
-const BULK_PLACEHOLDER = `name1|sk-key1\nname2|sk-key2\nsk-key-only-auto-named`;
+const BULK_PLACEHOLDER = `sk-key-1\nsk-key-2\nsk-key-3`;
 
 function CloudflareConfigSection({ cloudflareData, setCloudflareData }) {
   return (
@@ -133,10 +133,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   const handleSubmit = async () => {
     if (!provider) return;
     if (!isOllamaLocal && !formData.apiKey) return;
-    if (!isOllamaLocal) {
-      // Non-ollama providers require a name
-      if (!formData.name) return;
-    }
+    const connectionName = formData.name.trim() || `${providerName || provider} Key`;
     if (isCompatible && !formData.defaultModel.trim()) return;
     setSaving(true);
     try {
@@ -158,7 +155,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         setValidating(false);
       }
       await onSave({
-        name: formData.name || (isOllamaLocal ? "Ollama Local" : ""),
+        name: connectionName,
         apiKey: formData.apiKey,
         defaultModel: isCompatible ? formData.defaultModel.trim() : undefined,
         priority: formData.priority,
@@ -213,7 +210,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         </div>
         {mode === "bulk" && (
           <div className="flex flex-col gap-3">
-            <p className="text-xs text-text-muted">One key per line. Format: <code>name|apiKey</code> or just <code>apiKey</code> (auto-named by index).</p>
+            <p className="text-xs text-text-muted">One API key per line. Optional: <code>name|apiKey</code>.</p>
             <textarea
               className="w-full rounded border border-accent/30 bg-sidebar p-2 text-sm font-mono resize-y min-h-[140px] focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder={BULK_PLACEHOLDER}
@@ -236,10 +233,10 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {mode === "single" && (<>
         <Input
-          label="Name"
+          label="Name (optional)"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={isOllamaLocal ? "Ollama Local" : "Production Key"}
+          placeholder={isOllamaLocal ? "Ollama Local" : `${providerName || provider} Key`}
         />
         {isOllamaLocal && (
           <div className="flex gap-2">
@@ -274,24 +271,6 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             </div>
           </div>
         )}
-        {isXaiApiKey && (
-          <p className="text-xs text-text-muted">
-            Use a direct xAI API key from console.x.ai. This is separate from Grok Build OAuth.
-          </p>
-        )}
-        {isCookie && authHint && (
-          <p className="text-xs text-text-muted">
-            {authHint}
-            {website && (
-              <>
-                {" "}
-                <a href={website} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                  Open {website.replace(/^https?:\/\//, "")}
-                </a>
-              </>
-            )}
-          </p>
-        )}
         {providerRegions && (
           <Select
             label="Region"
@@ -319,11 +298,6 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </Badge>
         )}
         {error && <p className="text-xs text-red-500 break-words">{error}</p>}
-        {isCompatible && (
-          <p className="text-xs text-text-muted">
-            Enter the model ID exactly as your compatible endpoint expects it. This model will be saved as the connection default.
-          </p>
-        )}
         {isCloudflareAi && <CloudflareConfigSection cloudflareData={cloudflareData} setCloudflareData={setCloudflareData} />}
         {isAzure && <AzureConfigSection azureData={azureData} setAzureData={setAzureData} />}
         <Input
@@ -347,11 +321,8 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             No active proxy pools available. Create one in Proxy Pools page first.
           </p>
         )}
-        <p className="text-xs text-text-muted">
-          Legacy manual proxy fields are still accepted by API for backward compatibility.
-        </p>
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
+          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && !formData.apiKey) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>

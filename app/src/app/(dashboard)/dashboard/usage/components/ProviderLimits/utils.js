@@ -7,6 +7,9 @@ export const REFRESH_INTERVAL_MS = 60000;
 export const CLAUDE_REFRESH_INTERVAL_MS = 180000;
 export const DEPLETED_QUOTA_THRESHOLD = 5;
 export const AUTO_REFRESH_STORAGE_KEY = "quotaAutoRefresh";
+export const REFRESH_INTERVAL_STORAGE_KEY = "quotaRefreshIntervalMinutes";
+export const REFRESH_INTERVAL_OPTIONS = [1, 5, 10, 15, 30];
+export const DEFAULT_REFRESH_INTERVAL_MINUTES = 1;
 export const CONNECTIONS_PAGE_SIZE = 20;
 export const ACCOUNT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 export const ACCOUNT_PAGE_SIZE_MAX = 500;
@@ -22,6 +25,22 @@ export const QUOTA_SORT_OPTIONS = [
 ];
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
+export function getRefreshIntervalSeconds(value) {
+  const minutes = Number(value);
+  return (REFRESH_INTERVAL_OPTIONS.includes(minutes)
+    ? minutes
+    : DEFAULT_REFRESH_INTERVAL_MINUTES) * 60;
+}
+
+export function shouldFetchQuotaOnTick(connection, tick, refreshIntervalSeconds) {
+  if (connection.provider !== "claude") return true;
+  const claudeEvery = Math.max(
+    1,
+    Math.round(CLAUDE_REFRESH_INTERVAL_MS / (refreshIntervalSeconds * 1000)),
+  );
+  return tick % claudeEvery === 0;
+}
+
 export function getConnectionLabel(connection) {
   return connection.name?.trim()
     || connection.email?.trim()

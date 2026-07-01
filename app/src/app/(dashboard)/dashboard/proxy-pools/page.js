@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Badge, Button, Card, CardSkeleton, Input, Modal, Toggle, ConfirmModal } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
+import { summarizeProxyHealthResults } from "./utils";
 
 function parseProxyLine(line) {
   const trimmed = line.trim();
@@ -319,7 +320,7 @@ export default function ProxyPoolsPage() {
     if (targets.length === 0) return;
     setHealthChecking(true);
     setHealthProgress({ current: 0, total: targets.length });
-    let alive = 0; const deadIds = [];
+    const results = [];
     let done = 0;
     const CONCURRENCY = 10;
     const queue = [...targets];
@@ -331,9 +332,9 @@ export default function ProxyPoolsPage() {
         try {
           const res = await fetch(`/api/proxy-pools/${pool.id}/test`, { method: "POST" });
           const data = await res.json();
-          if (res.ok && data.ok) alive += 1; else deadIds.push(pool.id);
+          results.push({ id: pool.id, ok: res.ok && data.ok });
         } catch {
-          deadIds.push(pool.id);
+          results.push({ id: pool.id, ok: false });
         } finally {
           done += 1;
           setHealthProgress({ current: done, total: targets.length });
@@ -346,30 +347,23 @@ export default function ProxyPoolsPage() {
     setHealthChecking(false);
     setHealthProgress({ current: 0, total: 0 });
 
+    const { alive, deadIds } = summarizeProxyHealthResults(results);
     if (deadIds.length > 0) {
       setConfirmState({
-        title: "Disable Dead Proxies",
-        message: `Alive: ${alive}, Dead: ${deadIds.length}.\n\nDisable ${deadIds.length} dead proxies?`,
+        title: "SmartHealth",
+        message: `Alive: ${alive}, Dead: ${deadIds.length}.\n\nDelete ${deadIds.length} dead proxy pool(s)? Bound pools are skipped by the API.`,
         onConfirm: async () => {
           setConfirmState(null);
           setBulkBusy(true);
           try {
-            await Promise.all(deadIds.map(id =>
-              fetch(`/api/proxy-pools/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ isActive: false }),
-              }).catch(() => {})
-            ));
-            await fetchProxyPools();
-            notify.success(`Disabled ${deadIds.length} dead proxies`);
+            await deleteProxyPools(deadIds);
           } finally {
             setBulkBusy(false);
           }
         }
       });
     } else {
-      notify.success(`Health check done. Alive: ${alive}, Dead: ${deadIds.length}`);
+      notify.success(`SmartHealth done. Alive: ${alive}, Dead: ${deadIds.length}`);
     }
   };
 
@@ -637,6 +631,9 @@ export default function ProxyPoolsPage() {
             )}
           </div>
 
+          <Button size="sm" variant="secondary" icon="health_and_safety" onClick={handleHealthCheck} disabled={healthChecking || bulkBusy}>
+            {healthChecking ? `SmartHealth ${healthProgress.current}/${healthProgress.total}` : "SmartHealth"}
+          </Button>
           <Button size="sm" variant="secondary" icon="upload" onClick={openBatchImportModal}>
             Batch Import
           </Button>

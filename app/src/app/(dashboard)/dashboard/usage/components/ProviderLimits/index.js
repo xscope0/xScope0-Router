@@ -25,8 +25,11 @@ import {
   getQuotaCache,
   setQuotaCache,
   QUOTA_CACHE_KEY,
-  REFRESH_INTERVAL_MS,
-  CLAUDE_REFRESH_INTERVAL_MS,
+  REFRESH_INTERVAL_STORAGE_KEY,
+  REFRESH_INTERVAL_OPTIONS,
+  DEFAULT_REFRESH_INTERVAL_MINUTES,
+  getRefreshIntervalSeconds,
+  shouldFetchQuotaOnTick,
   DEPLETED_QUOTA_THRESHOLD,
   AUTO_REFRESH_STORAGE_KEY,
   CONNECTIONS_PAGE_SIZE,
@@ -94,11 +97,12 @@ export default function ProviderLimits() {
   const [loading, setLoading] = useState({});
   const [errors, setErrors] = useState({});
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshIntervalMinutes, setRefreshIntervalMinutes] = useState(DEFAULT_REFRESH_INTERVAL_MINUTES);
   const [autoPingMap, setAutoPingMap] = useState({});
   const [lastUpdated, setLastUpdated] = useState(null);
   const [hasHydratedAutoRefresh, setHasHydratedAutoRefresh] = useState(false);
   const [refreshingAll, setRefreshingAll] = useState(false);
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(getRefreshIntervalSeconds(DEFAULT_REFRESH_INTERVAL_MINUTES));
   const [connectionsLoading, setConnectionsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
@@ -134,6 +138,7 @@ export default function ProviderLimits() {
   const countdownRef = useRef(null);
   const tickCountRef = useRef(0);
 
+  const refreshIntervalSeconds = getRefreshIntervalSeconds(refreshIntervalMinutes);
   const fetchConnections = useCallback(
     async (targetPage = page) => {
       try {
@@ -407,13 +412,11 @@ export default function ProviderLimits() {
     if (refreshingAll) return;
 
     setRefreshingAll(true);
-    setCountdown(60);
+    setCountdown(refreshIntervalSeconds);
 
-    // Throttle Claude: poll its quota every Nth auto-tick (manual force bypasses)
     const tick = (tickCountRef.current += 1);
-    const claudeEvery = Math.round(CLAUDE_REFRESH_INTERVAL_MS / REFRESH_INTERVAL_MS);
     const shouldFetch = (conn) =>
-      force || conn.provider !== "claude" || tick % claudeEvery === 0;
+      force || shouldFetchQuotaOnTick(conn, tick, refreshIntervalSeconds);
 
     try {
       const visibleConnections = await fetchConnections(page);
@@ -438,7 +441,7 @@ export default function ProviderLimits() {
     } finally {
       setRefreshingAll(false);
     }
-  }, [refreshingAll, fetchConnections, fetchQuota, page]);
+  }, [refreshingAll, refreshIntervalSeconds, fetchConnections, fetchQuota, page]);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -466,16 +469,19 @@ export default function ProviderLimits() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(AUTO_REFRESH_STORAGE_KEY);
-    setAutoRefresh(stored === null ? true : stored === "true");
+    const storedAutoRefresh = window.localStorage.getItem(AUTO_REFRESH_STORAGE_KEY);
+    const storedInterval = window.localStorage.getItem(REFRESH_INTERVAL_STORAGE_KEY);
+    setAutoRefresh(storedAutoRefresh === null ? true : storedAutoRefresh === "true");
+    setRefreshIntervalMinutes(storedInterval === null ? DEFAULT_REFRESH_INTERVAL_MINUTES : Number(storedInterval));
+    setCountdown(getRefreshIntervalSeconds(storedInterval === null ? DEFAULT_REFRESH_INTERVAL_MINUTES : storedInterval));
     setHasHydratedAutoRefresh(true);
   }, []);
 
-  // Persist auto-refresh preference
   useEffect(() => {
     if (typeof window === "undefined" || !hasHydratedAutoRefresh) return;
     window.localStorage.setItem(AUTO_REFRESH_STORAGE_KEY, String(autoRefresh));
-  }, [autoRefresh, hasHydratedAutoRefresh]);
+    window.localStorage.setItem(REFRESH_INTERVAL_STORAGE_KEY, String(refreshIntervalMinutes));
+  }, [autoRefresh, refreshIntervalMinutes, hasHydratedAutoRefresh]);
 
   // Load Claude auto-ping per-connection map
   useEffect(() => {
@@ -516,15 +522,14 @@ export default function ProviderLimits() {
       return;
     }
 
-    // Main refresh interval
+    setCountdown(refreshIntervalSeconds);
     intervalRef.current = setInterval(() => {
       refreshAll();
-    }, REFRESH_INTERVAL_MS);
+    }, refreshIntervalSeconds * 1000);
 
-    // Countdown interval
     countdownRef.current = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) return 60;
+        if (prev <= 1) return refreshIntervalSeconds;
         return prev - 1;
       });
     }, 1000);
@@ -533,7 +538,7 @@ export default function ProviderLimits() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [autoRefresh, refreshAll, hasHydratedAutoRefresh]);
+  }, [autoRefresh, refreshAll, hasHydratedAutoRefresh, refreshIntervalSeconds]);
 
   // Pause auto-refresh when tab is hidden (Page Visibility API)
   useEffect(() => {
@@ -548,10 +553,10 @@ export default function ProviderLimits() {
           countdownRef.current = null;
         }
       } else if (autoRefresh && hasHydratedAutoRefresh) {
-        // Resume auto-refresh when tab becomes visible
-        intervalRef.current = setInterval(() => refreshAll(), REFRESH_INTERVAL_MS);
+        setCountdown(refreshIntervalSeconds);
+        intervalRef.current = setInterval(() => refreshAll(), refreshIntervalSeconds * 1000);
         countdownRef.current = setInterval(() => {
-          setCountdown((prev) => (prev <= 1 ? 60 : prev - 1));
+          setCountdown((prev) => (prev <= 1 ? refreshIntervalSeconds : prev - 1));
         }, 1000);
       }
     };
@@ -560,7 +565,7 @@ export default function ProviderLimits() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [autoRefresh, refreshAll, hasHydratedAutoRefresh]);
+  }, [autoRefresh, refreshAll, hasHydratedAutoRefresh, refreshIntervalSeconds]);
 
   const sortedConnections = useMemo(
     () =>
@@ -849,6 +854,17 @@ export default function ProviderLimits() {
             <span className="hidden sm:inline">Turn on Available</span>
           </button>
 
+          <select
+            value={refreshIntervalMinutes}
+            onChange={(event) => setRefreshIntervalMinutes(Number(event.target.value))}
+            className="h-8 rounded-lg border border-black/10 bg-black/[0.02] px-2 text-xs text-text-primary outline-none transition-colors hover:bg-black/5 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/10"
+            aria-label="Auto-refresh interval"
+            title="Auto-refresh interval"
+          >
+            {REFRESH_INTERVAL_OPTIONS.map((minutes) => (
+              <option key={minutes} value={minutes}>{minutes}m</option>
+            ))}
+          </select>
           {/* Auto-refresh toggle */}
           <button
             onClick={() => setAutoRefresh((prev) => !prev)}

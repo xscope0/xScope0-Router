@@ -200,17 +200,28 @@ function normalizeProxyUrl(proxyUrl) {
   }
 }
 
-function resolveConnectionProxyUrl(targetUrl, proxyOptions) {
+export function resolveConnectionProxyUrls(targetUrl, proxyOptions) {
   const enabled = proxyOptions?.enabled === true || proxyOptions?.connectionProxyEnabled === true;
-  if (!enabled) return null;
+  if (!enabled) return [];
 
-  const proxyUrlRaw = normalizeString(proxyOptions?.url ?? proxyOptions?.connectionProxyUrl);
-  if (!proxyUrlRaw) return null;
-
+  const rawUrls = Array.isArray(proxyOptions?.connectionProxyUrls)
+    ? proxyOptions.connectionProxyUrls
+    : [proxyOptions?.url ?? proxyOptions?.connectionProxyUrl];
   const noProxy = normalizeString(proxyOptions?.noProxy ?? proxyOptions?.connectionNoProxy);
-  if (noProxy && shouldBypassByNoProxy(targetUrl, noProxy)) return null;
+  if (noProxy && shouldBypassByNoProxy(targetUrl, noProxy)) return [];
 
-  return normalizeProxyUrl(proxyUrlRaw);
+  return rawUrls
+    .map((value) => normalizeProxyUrl(normalizeString(value)))
+    .filter(Boolean);
+}
+
+function resolveConnectionProxyUrl(targetUrl, proxyOptions) {
+  return resolveConnectionProxyUrls(targetUrl, proxyOptions)[0] || null;
+}
+
+export function shouldRetryProxyResponse(response) {
+  if (!response) return false;
+  return response.status === 429 || response.status >= 500;
 }
 
 /**
@@ -305,23 +316,28 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
     return originalFetch(vercelRelayUrl, { ...options, headers: relayHeaders });
   }
 
-  const connectionProxyUrl = resolveConnectionProxyUrl(targetUrl, proxyOptions);
-  const envProxyUrl = connectionProxyUrl ? null : normalizeProxyUrl(getEnvProxyUrl(targetUrl));
-  const proxyUrl = connectionProxyUrl || envProxyUrl;
+  const connectionProxyUrls = resolveConnectionProxyUrls(targetUrl, proxyOptions);
+  const envProxyUrl = connectionProxyUrls.length > 0 ? null : normalizeProxyUrl(getEnvProxyUrl(targetUrl));
+  const proxyUrls = connectionProxyUrls.length > 0 ? connectionProxyUrls : (envProxyUrl ? [envProxyUrl] : []);
 
   // MITM DNS bypass: for known MITM-intercepted hosts, resolve real IP to avoid DNS spoof
   if (shouldBypassMitmDns(targetUrl)) {
-    if (proxyUrl) {
-      // Proxy resolves DNS externally (not affected by /etc/hosts) — use proxy directly
-      try {
-        const dispatcher = await getDispatcher(proxyUrl);
-        return await originalFetch(url, { ...options, dispatcher });
-      } catch (proxyError) {
-        if (proxyOptions?.strictProxy === true) {
-          throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${proxyError.message}`);
+    if (proxyUrls.length > 0) {
+      let lastProxyError = null;
+      for (const proxyUrl of proxyUrls) {
+        try {
+          const dispatcher = await getDispatcher(proxyUrl);
+          const response = await originalFetch(url, { ...options, dispatcher });
+          if (!shouldRetryProxyResponse(response)) return response;
+        } catch (proxyError) {
+          lastProxyError = proxyError;
+          if (proxyUrl === proxyUrls.at(-1)) break;
         }
-        console.warn(`[ProxyFetch] Proxy failed, falling back to direct bypass: ${proxyError.message}`);
       }
+      if (proxyOptions?.strictProxy === true) {
+        throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${lastProxyError?.message || "all proxies returned retryable responses"}`);
+      }
+      console.warn(`[ProxyFetch] Proxy failed, falling back to direct bypass: ${lastProxyError?.message || "all proxies returned retryable responses"}`);
     }
     // No proxy — manually resolve real IP to bypass DNS spoof
     try {
@@ -333,18 +349,24 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
     }
   }
 
-  if (proxyUrl) {
-    try {
-      const dispatcher = await getDispatcher(proxyUrl);
-      return await originalFetch(url, { ...options, dispatcher });
-    } catch (proxyError) {
-      // If strictProxy is enabled, fail hard instead of falling back to direct
-      if (proxyOptions?.strictProxy === true) {
-        throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${proxyError.message}`);
+  if (proxyUrls.length > 0) {
+    let lastProxyError = null;
+    for (const proxyUrl of proxyUrls) {
+      try {
+        const dispatcher = await getDispatcher(proxyUrl);
+        const response = await originalFetch(url, { ...options, dispatcher });
+        if (!shouldRetryProxyResponse(response)) return response;
+      } catch (proxyError) {
+        lastProxyError = proxyError;
+        if (proxyUrl === proxyUrls.at(-1)) break;
       }
-      console.warn(`[ProxyFetch] Proxy failed, falling back to direct: ${proxyError.message}`);
-      return originalFetch(url, options);
     }
+
+    if (proxyOptions?.strictProxy === true) {
+      throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${lastProxyError?.message || "all proxies returned retryable responses"}`);
+    }
+    console.warn(`[ProxyFetch] Proxy failed, falling back to direct: ${lastProxyError?.message || "all proxies returned retryable responses"}`);
+    return originalFetch(url, options);
   }
 
   // got-scraping disabled — use native fetch directly
