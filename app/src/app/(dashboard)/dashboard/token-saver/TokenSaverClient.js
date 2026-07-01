@@ -9,7 +9,7 @@ import {
   CAVEMAN_LEVELS,
   TERSE_LEVELS,
   PONYTAIL_LEVELS,
-} from "../endpoint/endpointConstants";
+} from "./tokenSaverConstants";
 
 export default function TokenSaverClient() {
   const [rtkEnabled, setRtkEnabledState] = useState(true);
